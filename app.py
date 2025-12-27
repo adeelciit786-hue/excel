@@ -204,8 +204,10 @@ def generate_recommendations(df):
         })
     
     # Rule 4: Data Type Diversity
-    numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
-    categorical_cols = len(df.select_dtypes(include=['object']).columns)
+    numeric_cols_list = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols_list = df.select_dtypes(include=['object']).columns.tolist()
+    numeric_cols = len(numeric_cols_list)
+    categorical_cols = len(categorical_cols_list)
     
     if numeric_cols == 0:
         recommendations.append({
@@ -249,18 +251,16 @@ def generate_recommendations(df):
     
     # Rule 5: Outliers Detection
     outlier_cols = []
-    for col in numeric_cols:
-        col_name = df.select_dtypes(include=[np.number]).columns[col] if col < numeric_cols else None
-        if col_name:
-            try:
-                Q1 = df[col_name].quantile(0.25)
-                Q3 = df[col_name].quantile(0.75)
-                IQR = Q3 - Q1
-                outliers = df[(df[col_name] < Q1 - 1.5*IQR) | (df[col_name] > Q3 + 1.5*IQR)]
-                if len(outliers) > len(df) * 0.05:
-                    outlier_cols.append((col_name, len(outliers)))
-            except:
-                pass
+    for col_name in numeric_cols_list:
+        try:
+            Q1 = df[col_name].quantile(0.25)
+            Q3 = df[col_name].quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = df[(df[col_name] < Q1 - 1.5*IQR) | (df[col_name] > Q3 + 1.5*IQR)]
+            if len(outliers) > len(df) * 0.05:
+                outlier_cols.append((col_name, len(outliers)))
+        except:
+            pass
     
     if outlier_cols:
         recommendations.append({
