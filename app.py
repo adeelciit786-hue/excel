@@ -69,6 +69,228 @@ if 'df' not in st.session_state:
 if 'filename' not in st.session_state:
     st.session_state.filename = None
 
+# Function to generate detailed recommendations with reasoning
+def generate_recommendations(df):
+    """Generate detailed recommendations with reasoning and actionable insights"""
+    recommendations = []
+    
+    # Rule 1: Data Completeness
+    missing_data = df.isnull().sum()
+    completeness = (1 - missing_data.sum() / (len(df) * len(df.columns))) * 100
+    
+    if completeness >= 95:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'success',
+            'icon': '✅',
+            'title': 'Excellent Data Completeness',
+            'score': f'{completeness:.1f}%',
+            'issue': 'None detected',
+            'reasoning': f'Your dataset has {completeness:.1f}% completeness, which is excellent. This means {missing_data.sum()} out of {len(df) * len(df.columns)} total cells are empty.',
+            'impact': 'High quality data enables accurate analysis and reliable insights',
+            'action': 'Continue with confidence - your data quality is excellent!',
+            'benefit': 'More reliable analytics, better decision-making'
+        })
+    elif completeness >= 80:
+        recommendations.append({
+            'priority': 'medium',
+            'type': 'warning',
+            'icon': '⚠️',
+            'title': 'Good Data Completeness',
+            'score': f'{completeness:.1f}%',
+            'issue': f'{missing_data.sum()} missing values detected',
+            'reasoning': f'Your dataset has {completeness:.1f}% completeness. {missing_data.sum()} cells are empty, which may affect analysis accuracy.',
+            'impact': 'Missing data can skew statistical results and reduce model accuracy',
+            'action': 'Consider these strategies: (1) Drop rows with missing values (2) Fill with mean/median (3) Use advanced imputation methods',
+            'benefit': 'Improved data quality leads to more accurate insights'
+        })
+    else:
+        recommendations.append({
+            'priority': 'critical',
+            'type': 'danger',
+            'icon': '🚨',
+            'title': 'Low Data Completeness',
+            'score': f'{completeness:.1f}%',
+            'issue': f'{missing_data.sum()} missing values ({100-completeness:.1f}%)',
+            'reasoning': f'Your dataset has only {completeness:.1f}% completeness. {missing_data.sum()} cells are empty, which significantly impacts analysis.',
+            'impact': 'Low completeness severely affects statistical reliability and model performance',
+            'action': '(1) Investigate why data is missing (2) Remove incomplete columns/rows (3) Use imputation if justified (4) Collect missing data if possible',
+            'benefit': 'Addressing data completeness is crucial for meaningful analysis'
+        })
+    
+    # Rule 2: Duplicate Detection
+    dup_count = df.duplicated().sum()
+    dup_percent = (dup_count / len(df)) * 100
+    
+    if dup_percent == 0:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'success',
+            'icon': '✅',
+            'title': 'No Duplicate Records Found',
+            'score': '0%',
+            'issue': 'None detected',
+            'reasoning': f'All {len(df)} records in your dataset are unique. No duplicate rows were found.',
+            'impact': 'Ensures each observation is counted only once, preventing bias',
+            'action': 'No action needed - your data is clean!',
+            'benefit': 'Accurate counts and reliable statistical analysis'
+        })
+    elif dup_percent < 5:
+        recommendations.append({
+            'priority': 'medium',
+            'type': 'warning',
+            'icon': '⚠️',
+            'title': 'Minor Duplicate Records',
+            'score': f'{dup_percent:.1f}%',
+            'issue': f'{dup_count} duplicate rows ({dup_percent:.1f}% of data)',
+            'reasoning': f'Found {dup_count} duplicate rows, which is {dup_percent:.1f}% of your {len(df)} total records.',
+            'impact': 'Small percentage of duplicates may slightly bias analysis results',
+            'action': 'Review duplicates: (1) Use df.duplicated() to identify (2) Decide if legitimate or errors (3) Remove if unneeded',
+            'benefit': 'Cleaner data improves accuracy of metrics and statistical tests'
+        })
+    else:
+        recommendations.append({
+            'priority': 'critical',
+            'type': 'danger',
+            'icon': '🚨',
+            'title': 'High Duplicate Rate',
+            'score': f'{dup_percent:.1f}%',
+            'issue': f'{dup_count} duplicate rows ({dup_percent:.1f}%)',
+            'reasoning': f'Your dataset contains {dup_count} duplicate rows, which is {dup_percent:.1f}% of total records.',
+            'impact': 'High duplication severely skews analysis - counts are inflated, statistics are unreliable',
+            'action': '(1) Investigate root cause (2) Remove obvious duplicates (3) Keep domain-specific duplicates if valid (4) Prevent future duplicates',
+            'benefit': 'Removing duplicates significantly improves data integrity'
+        })
+    
+    # Rule 3: Dataset Size
+    if len(df) < 50:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'info',
+            'icon': 'ℹ️',
+            'title': 'Small Sample Size',
+            'score': f'{len(df)} rows',
+            'issue': 'Limited statistical power',
+            'reasoning': f'Your dataset has only {len(df)} rows, which is quite small for statistical analysis.',
+            'impact': 'Small samples have high sampling error and low statistical power',
+            'action': '(1) Collect more data if possible (2) Use methods suited for small samples (3) Increase precision of measurements',
+            'benefit': 'Larger samples provide more reliable and generalizable results'
+        })
+    elif len(df) > 100000:
+        recommendations.append({
+            'priority': 'medium',
+            'type': 'info',
+            'icon': 'ℹ️',
+            'title': 'Large Dataset Detected',
+            'score': f'{len(df):,} rows',
+            'issue': 'May require optimization',
+            'reasoning': f'Your dataset contains {len(df):,} rows, which is quite large.',
+            'impact': 'Large datasets need optimized processing and may have different characteristics',
+            'action': '(1) Consider sampling for exploratory analysis (2) Use aggregation for visualization (3) Profile data performance',
+            'benefit': 'Proper handling of large data enables powerful insights from scale'
+        })
+    else:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'success',
+            'icon': '✅',
+            'title': 'Optimal Dataset Size',
+            'score': f'{len(df):,} rows',
+            'issue': 'None',
+            'reasoning': f'Your dataset has {len(df):,} rows, which is ideal for comprehensive analysis.',
+            'impact': 'Good balance between statistical power and practical manageability',
+            'action': 'Proceed with full analysis - your data size is ideal!',
+            'benefit': 'Sufficient data for reliable statistical inference and insights'
+        })
+    
+    # Rule 4: Data Type Diversity
+    numeric_cols = len(df.select_dtypes(include=[np.number]).columns)
+    categorical_cols = len(df.select_dtypes(include=['object']).columns)
+    
+    if numeric_cols == 0:
+        recommendations.append({
+            'priority': 'critical',
+            'type': 'warning',
+            'icon': '⚠️',
+            'title': 'No Numeric Data Found',
+            'score': '0 numeric columns',
+            'issue': 'Limited quantitative analysis possible',
+            'reasoning': f'Your dataset contains only {categorical_cols} text/categorical columns and no numeric columns.',
+            'impact': 'Restricts ability to perform statistical analysis, correlation studies, or quantitative modeling',
+            'action': '(1) Convert categorical to numeric (2) Add numeric measurements (3) Create calculated fields (4) Use text analysis if appropriate',
+            'benefit': 'Adding numeric data enables statistical analysis, trends, and predictions'
+        })
+    elif numeric_cols > 0 and categorical_cols == 0:
+        recommendations.append({
+            'priority': 'medium',
+            'type': 'info',
+            'icon': 'ℹ️',
+            'title': 'Purely Numeric Dataset',
+            'score': f'{numeric_cols} numeric columns',
+            'issue': 'No categorical context',
+            'reasoning': f'Your dataset has {numeric_cols} numeric columns but no categorical columns for grouping/segmentation.',
+            'impact': 'Good for quantitative analysis but lacks dimensions for segmentation or classification',
+            'action': '(1) Add categorical identifiers if available (2) Create categories from numeric ranges (3) Focus on correlation/trends',
+            'benefit': 'Numeric data enables powerful statistical and mathematical analysis'
+        })
+    else:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'success',
+            'icon': '✅',
+            'title': 'Good Data Type Mix',
+            'score': f'{numeric_cols} numeric + {categorical_cols} categorical',
+            'issue': 'None',
+            'reasoning': f'Your dataset has {numeric_cols} numeric columns and {categorical_cols} categorical columns.',
+            'impact': 'Balanced mix enables both quantitative analysis and segmentation',
+            'action': 'Excellent mix - use numeric for analytics and categorical for grouping!',
+            'benefit': 'Enables comprehensive analysis including aggregation, comparison, and modeling'
+        })
+    
+    # Rule 5: Outliers Detection
+    outlier_cols = []
+    for col in numeric_cols:
+        col_name = df.select_dtypes(include=[np.number]).columns[col] if col < numeric_cols else None
+        if col_name:
+            try:
+                Q1 = df[col_name].quantile(0.25)
+                Q3 = df[col_name].quantile(0.75)
+                IQR = Q3 - Q1
+                outliers = df[(df[col_name] < Q1 - 1.5*IQR) | (df[col_name] > Q3 + 1.5*IQR)]
+                if len(outliers) > len(df) * 0.05:
+                    outlier_cols.append((col_name, len(outliers)))
+            except:
+                pass
+    
+    if outlier_cols:
+        recommendations.append({
+            'priority': 'medium',
+            'type': 'info',
+            'icon': 'ℹ️',
+            'title': 'Outliers Detected',
+            'score': f'{len(outlier_cols)} columns with outliers',
+            'issue': f'Found outliers in {len(outlier_cols)} numeric columns',
+            'reasoning': f'Detected potential outliers (values > 1.5×IQR) in columns: {", ".join([col[0] for col in outlier_cols[:3]])}',
+            'impact': 'Outliers can skew means, inflate standard deviations, and affect models',
+            'action': '(1) Visualize with box plots (2) Verify if valid or errors (3) Decide: keep, transform, or remove (4) Document decisions',
+            'benefit': 'Proper outlier handling improves statistical reliability and model performance'
+        })
+    else:
+        recommendations.append({
+            'priority': 'high',
+            'type': 'success',
+            'icon': '✅',
+            'title': 'No Significant Outliers',
+            'score': '0 columns flagged',
+            'issue': 'None detected',
+            'reasoning': 'No significant outliers detected in your numeric columns using IQR method.',
+            'impact': 'Clean data without extreme values enables more reliable statistical analysis',
+            'action': 'Continue analysis with confidence - data is well-behaved!',
+            'benefit': 'No outlier handling needed - focus on insights'
+        })
+    
+    return sorted(recommendations, key=lambda x: {'critical': 0, 'high': 1, 'medium': 2}.get(x['priority'], 3))
+
 # Sidebar
 with st.sidebar:
     st.header("📁 File Upload")
@@ -103,9 +325,48 @@ if st.session_state.df is None:
 else:
     df = st.session_state.df
     
-    # Create tabs for different analyses
+    # Generate recommendations
+    recommendations = generate_recommendations(df)
+    
+    # Display top recommendations on main screen
+    st.markdown("## 🎯 **KEY RECOMMENDATIONS**")
+    st.markdown("---")
+    
+    # Show top 2-3 critical/high priority recommendations
+    top_recs = [r for r in recommendations if r['priority'] in ['critical', 'high']][:3]
+    
+    for rec in top_recs:
+        color_map = {
+            'success': '🟢',
+            'warning': '🟡',
+            'danger': '🔴',
+            'info': '🔵'
+        }
+        
+        with st.container():
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                st.write(f"## {rec['icon']}")
+            with col2:
+                st.markdown(f"### {rec['title']}")
+            
+            col1, col2 = st.columns([2, 3])
+            with col1:
+                st.markdown(f"**Priority:** `{rec['priority'].upper()}`")
+                st.markdown(f"**Score:** `{rec['score']}`")
+            with col2:
+                if rec.get('issue'):
+                    st.markdown(f"**Issue:** {rec['issue']}")
+            
+            st.markdown(f"**Reasoning:**\n{rec['reasoning']}")
+            st.markdown(f"**Impact:** {rec['impact']}")
+            st.markdown(f"**Recommended Action:** {rec['action']}")
+            st.markdown(f"**Benefit:** {rec['benefit']}")
+            st.divider()
+    
+    # Create tabs for detailed analysis
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["📋 Overview", "🔍 Quality", "📊 Visualize", "💡 Insights", "⚙️ Advanced"]
+        ["📋 Overview", "🔍 Quality", "📊 Visualize", "💡 All Insights", "⚙️ Advanced"]
     )
     
     # ==================== TAB 1: OVERVIEW ====================
@@ -223,79 +484,45 @@ else:
                            title="Correlation Heatmap", color_continuous_scale="RdBu")
             st.plotly_chart(fig, use_container_width=True)
     
-    # ==================== TAB 4: INSIGHTS & RECOMMENDATIONS ====================
+    # ==================== TAB 4: ALL INSIGHTS & DETAILED RECOMMENDATIONS ====================
     with tab4:
-        st.subheader("💡 Smart Recommendations")
+        st.subheader("💡 All Recommendations (Detailed)")
+        st.write("Below are all recommendations for your dataset, sorted by priority:")
+        st.divider()
         
-        recommendations = []
-        
-        # Rule 1: Data Completeness
-        completeness = (1 - missing_data.sum() / (len(df) * len(df.columns))) * 100
-        if completeness < 95:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'Data Completeness Issue',
-                'message': f'Your data completeness is {completeness:.1f}%. Consider handling missing values or removing incomplete records.'
-            })
-        else:
-            recommendations.append({
-                'type': 'success',
-                'title': 'Excellent Data Completeness',
-                'message': f'Your data completeness is {completeness:.1f}% - Great job maintaining data quality!'
-            })
-        
-        # Rule 2: Duplicates
-        dup_percent = (df.duplicated().sum() / len(df)) * 100
-        if dup_percent > 5:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'High Duplicate Rate',
-                'message': f'{dup_percent:.1f}% of your data contains duplicates. Consider removing or investigating these entries.'
-            })
-        
-        # Rule 3: Data Size
-        if len(df) < 100:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'Small Dataset',
-                'message': f'Your dataset has only {len(df)} rows. For better analysis, consider collecting more data.'
-            })
-        elif len(df) > 100000:
-            recommendations.append({
-                'type': 'info',
-                'title': 'Large Dataset',
-                'message': f'Your dataset has {len(df):,} rows. Consider breaking it into segments for targeted analysis.'
-            })
-        
-        # Rule 4: Column consistency
-        if len(numeric_cols) == 0:
-            recommendations.append({
-                'type': 'warning',
-                'title': 'No Numeric Data',
-                'message': 'Your dataset contains no numeric columns. Add numerical data for deeper analysis.'
-            })
-        
-        # Rule 5: Outliers in numeric data
-        for col in numeric_cols:
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            outliers = df[(df[col] < Q1 - 1.5*IQR) | (df[col] > Q3 + 1.5*IQR)]
-            if len(outliers) > len(df) * 0.05:
-                recommendations.append({
-                    'type': 'info',
-                    'title': f'Outliers in {col}',
-                    'message': f'Found {len(outliers)} potential outliers ({len(outliers)/len(df)*100:.1f}%) in column "{col}". Review these values.'
-                })
-        
-        # Display recommendations
-        for rec in recommendations:
-            if rec['type'] == 'success':
-                st.markdown(f'<div class="success-box">✅ <b>{rec["title"]}</b><br/>{rec["message"]}</div>', unsafe_allow_html=True)
-            elif rec['type'] == 'warning':
-                st.markdown(f'<div class="warning-box">⚠️ <b>{rec["title"]}</b><br/>{rec["message"]}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="recommendation-box">ℹ️ <b>{rec["title"]}</b><br/>{rec["message"]}</div>', unsafe_allow_html=True)
+        # Display all recommendations with detailed reasoning
+        for i, rec in enumerate(recommendations, 1):
+            priority_color = {
+                'critical': '🔴',
+                'high': '🟢',
+                'medium': '🟡',
+            }
+            
+            with st.container():
+                st.markdown(f"### {i}. {priority_color.get(rec['priority'], 'ℹ️')} {rec['title']}")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Priority", rec['priority'].upper(), delta_color="off")
+                with col2:
+                    st.metric("Score", rec['score'], delta_color="off")
+                with col3:
+                    if rec.get('issue'):
+                        st.metric("Issue", rec['issue'], delta_color="off")
+                
+                st.markdown(f"**📝 Reasoning:**")
+                st.write(rec['reasoning'])
+                
+                st.markdown(f"**⚡ Impact:**")
+                st.write(rec['impact'])
+                
+                st.markdown(f"**✅ Recommended Actions:**")
+                st.write(rec['action'])
+                
+                st.markdown(f"**💰 Expected Benefit:**")
+                st.write(rec['benefit'])
+                
+                st.divider()
     
     # ==================== TAB 5: ADVANCED ANALYSIS ====================
     with tab5:
